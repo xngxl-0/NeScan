@@ -1,4 +1,4 @@
-# TCP Port Scanner for Local Networks
+# NeScan, a Fast TCP Port Scanner for Local Networks 
 
 Welcome to the TCP Port Scanner project! This is a simple yet powerful tool for scanning ports on devices within a local network. It's perfect for network administrators, security researchers, or anyone curious about the status of ports in their network.
 
