@@ -1,8 +1,8 @@
 import socket
 import threading
 import argparse
-from tqdm import tqdm  # Progress bar
-
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor  # Thread pool for better management
 
 # Lists to store the results
 total_puertos_abiertos = []
@@ -13,20 +13,18 @@ lock = threading.Lock()  # Prevents errors when multiple threads write to the li
 def escanear_puerto(ip, puerto):
     """
     Scans a specific port on a given IP.
-    If the port is open, it adds it to the open ports list.
-    If it's closed, it adds it to the closed ports list.
+    Returns the result as a string.
     """
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(0.5)  # Timeout of 0.5 seconds
-            if s.connect_ex((ip, puerto)) == 0:  # Successful connection
-                with lock:  # Lock to avoid conflicts when writing to the list
-                    total_puertos_abiertos.append(f"[+++] {ip}:{puerto} OPEN")
+            if s.connect_ex((ip, puerto)) == 0:  # 0 means Successful connection
+                return f"[+++] {ip}:{puerto} OPEN"
             else:
-                with lock:
-                    total_puertos_cerrados.append(f"[-] {ip}:{puerto} CLOSED")
+                return f"[-] {ip}:{puerto} CLOSED"
     except Exception as e:
         print(f"Error scanning {ip}:{puerto}: {e}")
+        return None
 
 
 def validar_ip(ip):
@@ -47,22 +45,29 @@ def escanear_rango_ips(rango_ip, puertos):
         print(f"Error: The IP range '{rango_ip}' is not valid.")
         return
 
-    hilos = []  # List to store threads
     print("Starting scan...")
-    
-    # Iterate over the IPs in the range (e.g., 192.168.1.1 to 192.168.1.255)
-    for i in tqdm(range(1, 256), desc="Scan progress"):
-        ip = f"{rango_ip}.{i}"  # Build the full IP
-        
-        for puerto in puertos:
-            # Create a thread to scan each port on the current IP
-            hilo = threading.Thread(target=escanear_puerto, args=(ip, puerto))
-            hilos.append(hilo)
-            hilo.start()  # Start the thread
-    
-    # Wait for all threads to finish
-    for hilo in hilos:
-        hilo.join()
+    resultados = []  # List to store results in order
+
+    # Use a thread pool for better threading management
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        futures = []
+        for i in tqdm(range(1, 256), desc="Scan progress"):
+            ip = f"{rango_ip}.{i}"  # Build the full IP
+            for puerto in puertos:
+                futures.append(executor.submit(escanear_puerto, ip, puerto))
+
+        # Collect results in order
+        for future in futures:
+            resultado = future.result()
+            if resultado:
+                resultados.append(resultado)
+
+    # Separate results into open and closed ports
+    for resultado in resultados:
+        if "OPEN" in resultado:
+            total_puertos_abiertos.append(resultado)
+        else:
+            total_puertos_cerrados.append(resultado)
 
     # Display the scan results
     print("\n--- SCAN RESULTS ---")
@@ -73,22 +78,25 @@ def escanear_rango_ips(rango_ip, puertos):
     else:
         print("No open ports found.")
     
-    # Save the results to a file
+    # Save the results to separate files
     guardar_resultados()
 
 
 def guardar_resultados():
     """
-    Saves the scan results to a text file.
-    Creates two sections: one for open ports and another for closed ports.
+    Saves the scan results to two separate text files.
+    One for open ports and another for closed ports.
     """
     try:
-        with open("resultados_escaner.txt", "w") as archivo:
-            archivo.write("--- OPEN PORTS ---\n")
-            archivo.writelines(f"{linea}\n" for linea in total_puertos_abiertos)
-            archivo.write("\n--- CLOSED PORTS ---\n")
-            archivo.writelines(f"{linea}\n" for linea in total_puertos_cerrados)
-        print("Results saved to 'resultados_escaner.txt'.")
+        with open("open_ports.txt", "w") as archivo_abiertos:
+            archivo_abiertos.write("--- OPEN PORTS ---\n")
+            archivo_abiertos.writelines(f"{linea}\n" for linea in total_puertos_abiertos)
+        print("Open ports saved to 'open_ports.txt'.")
+
+        with open("closed_ports.txt", "w") as archivo_cerrados:
+            archivo_cerrados.write("--- CLOSED PORTS ---\n")
+            archivo_cerrados.writelines(f"{linea}\n" for linea in total_puertos_cerrados)
+        print("Closed ports saved to 'closed_ports.txt'.")
     except IOError as e:
         print(f"Error saving results: {e}")
 
