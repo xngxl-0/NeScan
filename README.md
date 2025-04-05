@@ -99,7 +99,7 @@ Closed Ports:
 ## Contributing
 
 If you'd like to contribute to this project, don't mind opening issues or creating pull requests. I need some practice and learn about you, so feel free!
-I would like to add a service discovery section in the code.
+I will be creating a service discovery section in the code.
 
 ## License
 
