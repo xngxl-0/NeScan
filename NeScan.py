@@ -3,12 +3,25 @@ import threading
 import argparse
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor  # Thread pool for better management
+from termcolor import colored  # Import termcolor for colored text
 
 # Lists to store the results
 total_puertos_abiertos = []
 total_puertos_cerrados = []
 lock = threading.Lock()  # Prevents errors when multiple threads write to the lists
 
+def print_banner():
+    banner = """
+    ███╗   ██╗███████╗███████╗ ██████╗ █████╗ ███╗   ██╗
+    ████╗  ██║██╔════╝██╔════╝██╔════╝██╔══██╗████╗  ██║
+    ██╔██╗ ██║█████╗  ███████╗██║     ███████║██╔██╗ ██║
+    ██║╚██╗██║██╔══╝  ╚════██║██║     ██╔══██║██║╚██╗██║
+    ██║ ╚████║███████╗███████║╚██████╗██║  ██║██║ ╚████║
+    ╚═╝  ╚═══╝╚══════╝╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝
+    
+    Made By Engel David (DrCipher)
+    """
+    print(colored(banner, 'magenta'))
 
 def escanear_puerto(ip, puerto):
     """
@@ -26,7 +39,6 @@ def escanear_puerto(ip, puerto):
         print(f"Error scanning {ip}:{puerto}: {e}")
         return None
 
-
 def validar_ip(ip):
     """
     Checks if an IP address is valid.
@@ -34,7 +46,6 @@ def validar_ip(ip):
     """
     partes = ip.split(".")
     return len(partes) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in partes)
-
 
 def escanear_rango_ips(rango_ip, puertos):
     """
@@ -81,7 +92,6 @@ def escanear_rango_ips(rango_ip, puertos):
     # Save the results to separate files
     guardar_resultados()
 
-
 def guardar_resultados():
     """
     Saves the scan results to two separate text files.
@@ -100,7 +110,6 @@ def guardar_resultados():
     except IOError as e:
         print(f"Error saving results: {e}")
 
-
 def main():
     """
     Main function that handles command-line arguments and runs the scan.
@@ -111,12 +120,13 @@ def main():
     parser.add_argument("puertos", nargs="+", type=int, help="List of ports to scan, separated by spaces (e.g., 22 80 443)")
     args = parser.parse_args()
 
+    print_banner()  # Print the banner
+
     try:
         # Call the function that performs the IP range scan
         escanear_rango_ips(args.rango_ip, args.puertos)
     except Exception as e:
         print(f"Error during the scan: {e}")
-
 
 if __name__ == "__main__":
     main()
